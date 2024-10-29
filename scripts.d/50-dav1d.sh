@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_REPO="https://code.videolan.org/videolan/dav1d.git"
-SCRIPT_COMMIT="ef4aff75b0b56a8e1af996458ae653c0728a1596"
+SCRIPT_COMMIT="22e9c0fee30051d44c0d99438a3aecd4c92237f5"
 
 ffbuild_enabled() {
     return 0
