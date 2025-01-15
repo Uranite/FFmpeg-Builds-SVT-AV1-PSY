@@ -1,22 +1,18 @@
 #!/bin/bash
 
-SCRIPT_REPO="https://code.videolan.org/videolan/libplacebo.git"
-SCRIPT_COMMIT="056b852018db04aa2ebc0982e27713afcea8106b"
+PLACEBO_REPO="https://github.com/haasn/libplacebo.git"
+PLACEBO_COMMIT="056b852018db04aa2ebc0982e27713afcea8106b"
 
 ffbuild_enabled() {
-    [[ $ADDINS_STR == *4.4* ]] && return -1
-    [[ $ADDINS_STR == *5.0* ]] && return -1
-    [[ $ADDINS_STR == *5.1* ]] && return -1
-    [[ $ADDINS_STR == *6.0* ]] && return -1
     return 0
 }
 
-ffbuild_dockerdl() {
-    default_dl .
-    echo "git submodule update --init --recursive"
-}
-
 ffbuild_dockerbuild() {
+    git-mini-clone "$PLACEBO_REPO" "$PLACEBO_COMMIT" placebo
+    cd placebo
+    git submodule update --init --recursive --depth 1
+
+    # Don't define PL_EXPORT for static build
     sed -i 's/DPL_EXPORT/DPL_STATIC/' src/meson.build
 
     mkdir build && cd build
@@ -24,25 +20,14 @@ ffbuild_dockerbuild() {
     local myconf=(
         --prefix="$FFBUILD_PREFIX"
         --buildtype=release
-        --default-library=static
-        -Dvulkan=enabled
-        -Dvk-proc-addr=disabled
+        -Ddefault_library=static
+        -D{d3d11,vulkan,shaderc}"=enabled"
+        -D{bench,demos,fuzz,tests}"=false"
+        -D{glslang,vk-proc-addr}"=disabled"
         -Dvulkan-registry="$FFBUILD_PREFIX"/share/vulkan/registry/vk.xml
-        -Dshaderc=enabled
-        -Dglslang=disabled
-        -Ddemos=false
-        -Dtests=false
-        -Dbench=false
-        -Dfuzz=false
     )
 
     if [[ $TARGET == win* ]]; then
-        myconf+=(
-            -Dd3d11=enabled
-        )
-    fi
-
-    if [[ $TARGET == win* || $TARGET == linux* ]]; then
         myconf+=(
             --cross-file=/cross.meson
         )
@@ -51,8 +36,8 @@ ffbuild_dockerbuild() {
         return -1
     fi
 
-    meson "${myconf[@]}" ..
-    ninja -j$(nproc)
+    meson setup "${myconf[@]}" ..
+    ninja -j"$(nproc)"
     ninja install
 
     echo "Libs.private: -lstdc++" >> "$FFBUILD_PREFIX"/lib/pkgconfig/libplacebo.pc
@@ -63,6 +48,5 @@ ffbuild_configure() {
 }
 
 ffbuild_unconfigure() {
-    [[ $ADDINS_STR == *4.4* ]] && return 0
     echo --disable-libplacebo
 }
