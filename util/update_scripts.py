@@ -1,31 +1,37 @@
 import os
 import sys
-import subprocess
+import asyncio
 import re
 import glob
 from pathlib import Path
 import tempfile
 import shutil
+from typing import Optional, Dict, List
 
-def run_command(cmd, cwd=None):
-    """Run a command and return its output."""
+async def run_command(cmd: List[str], cwd: Optional[str] = None) -> Optional[str]:
+    """Run a command asynchronously and return its output."""
     try:
-        result = subprocess.run(
-            cmd,
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
             cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=True
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            print(f"Error running command {' '.join(cmd)}: {stderr.decode()}")
+            return None
+            
+        return stdout.decode().strip()
+    except Exception as e:
         print(f"Error running command {' '.join(cmd)}: {e}")
         return None
 
-def get_git_default_branch(repo_url):
+async def get_git_default_branch(repo_url: str) -> Optional[str]:
     """Get the default branch name for a git repository."""
     try:
-        output = run_command(['git', 'remote', 'show', repo_url])
+        output = await run_command(['git', 'remote', 'show', repo_url])
         if output:
             for line in output.splitlines():
                 if "HEAD branch:" in line:
@@ -34,8 +40,70 @@ def get_git_default_branch(repo_url):
         print(f"Error getting default branch: {e}")
     return None
 
-def update_script(script_path):
-    """Process and update a single script file."""
+async def check_svn_repo(repo: str, current_rev: str) -> Optional[str]:
+    """Check SVN repository for updates."""
+    print(f"Checking svn rev for {repo}...")
+    cmd = ['svn', '--non-interactive', 'info',
+           '--username', 'anonymous', '--password', '', repo]
+    output = await run_command(cmd)
+    
+    if output:
+        for line in output.splitlines():
+            if line.startswith('Revision:'):
+                new_rev = line.split()[1].strip()
+                if new_rev != current_rev:
+                    return new_rev
+    return None
+
+async def check_hg_repo(repo: str, current_hgrev: str) -> Optional[str]:
+    """Check Mercurial repository for updates."""
+    print(f"Checking hg rev for {repo}...")
+    async with tempfile.TemporaryDirectory() as tmphgrepo:
+        await run_command(['hg', 'init'], cwd=tmphgrepo)
+        output = await run_command(
+            ['hg', 'in', '-f', '-n', '-l', '1', repo],
+            cwd=tmphgrepo
+        )
+        
+        if output:
+            for line in output.splitlines():
+                if 'changeset' in line:
+                    new_hgrev = line.split(':')[2].strip()
+                    if new_hgrev != current_hgrev:
+                        return new_hgrev
+    return None
+
+async def check_git_repo(
+    repo: str,
+    current_commit: str,
+    current_branch: Optional[str],
+    current_tagfilter: Optional[str]
+) -> Optional[str]:
+    """Check Git repository for updates."""
+    if current_tagfilter:
+        cmd = ['git', 'ls-remote', '--exit-code', '--tags', '--refs',
+               '--sort=v:refname', repo, f'refs/tags/{current_tagfilter}']
+        output = await run_command(cmd)
+        if output:
+            return output.splitlines()[-1].split('/')[2].strip()
+    else:
+        if not current_branch:
+            current_branch = await get_git_default_branch(repo)
+            if current_branch:
+                print(f"Found default branch {current_branch}")
+            
+        if current_branch:
+            cmd = ['git', 'ls-remote', '--exit-code', '--heads', '--refs',
+                  repo, f'refs/heads/{current_branch}']
+            output = await run_command(cmd)
+            if output:
+                new_commit = output.split()[0]
+                if new_commit != current_commit:
+                    return new_commit
+    return None
+
+async def update_script(script_path: str):
+    """Process and update a single script file asynchronously."""
     print(f"Processing {script_path}")
     
     # Read the script content
@@ -53,6 +121,8 @@ def update_script(script_path):
         return
     
     # Process multiple repository configurations
+    content_modified = False
+    
     for i in [''] + list(range(2, 10)):
         suffix = str(i) if i else ''
         repo_var = f'SCRIPT_REPO{suffix}'
@@ -76,79 +146,44 @@ def update_script(script_path):
         current_branch = script_vars.get(branch_var)
         current_tagfilter = script_vars.get(tagfilter_var)
         
-        # SVN Repository
+        # Check repository based on type
+        new_value = None
+        
         if current_rev:
-            print(f"Checking svn rev for {repo}...")
-            cmd = ['svn', '--non-interactive', 'info',
-                  '--username', 'anonymous', '--password', '', repo]
-            output = run_command(cmd)
-            
-            if output:
-                new_rev = None
-                for line in output.splitlines():
-                    if line.startswith('Revision:'):
-                        new_rev = line.split()[1].strip()
-                        break
+            new_value = await check_svn_repo(repo, current_rev)
+            if new_value:
+                content = re.sub(
+                    f'{rev_var}=.*',
+                    f'{rev_var}="{new_value}"',
+                    content,
+                    flags=re.MULTILINE
+                )
+                content_modified = True
                 
-                if new_rev and new_rev != current_rev:
-                    print(f"Updating {script_path}")
-                    content = re.sub(
-                        f'{rev_var}=.*',
-                        f'{rev_var}="{new_rev}"',
-                        content,
-                        flags=re.MULTILINE
-                    )
-        
-        # Mercurial Repository
         elif current_hgrev:
-            print(f"Checking hg rev for {repo}...")
-            with tempfile.TemporaryDirectory() as tmphgrepo:
-                run_command(['hg', 'init'], cwd=tmphgrepo)
-                output = run_command(['hg', 'in', '-f', '-n', '-l', '1', repo],
-                                  cwd=tmphgrepo)
+            new_value = await check_hg_repo(repo, current_hgrev)
+            if new_value:
+                content = re.sub(
+                    f'{hgrev_var}=.*',
+                    f'{hgrev_var}="{new_value}"',
+                    content,
+                    flags=re.MULTILINE
+                )
+                content_modified = True
                 
-                if output:
-                    for line in output.splitlines():
-                        if 'changeset' in line:
-                            new_hgrev = line.split(':')[2].strip()
-                            if new_hgrev != current_hgrev:
-                                print(f"Updating {script_path}")
-                                content = re.sub(
-                                    f'{hgrev_var}=.*',
-                                    f'{hgrev_var}="{new_hgrev}"',
-                                    content,
-                                    flags=re.MULTILINE
-                                )
-        
-        # Git Repository
         elif current_commit:
-            if current_tagfilter:
-                cmd = ['git', 'ls-remote', '--exit-code', '--tags', '--refs',
-                      '--sort=v:refname', repo, f'refs/tags/{current_tagfilter}']
-                output = run_command(cmd)
-                if output:
-                    new_commit = output.splitlines()[-1].split('/')[2].strip()
-            else:
-                if not current_branch:
-                    current_branch = get_git_default_branch(repo)
-                    print(f"Found default branch {current_branch}")
+            new_value = await check_git_repo(
+                repo, current_commit, current_branch, current_tagfilter
+            )
+            if new_value:
+                content = re.sub(
+                    f'{commit_var}=.*',
+                    f'{commit_var}="{new_value}"',
+                    content,
+                    flags=re.MULTILINE
+                )
+                content_modified = True
                 
-                if current_branch:
-                    cmd = ['git', 'ls-remote', '--exit-code', '--heads', '--refs',
-                          repo, f'refs/heads/{current_branch}']
-                    output = run_command(cmd)
-                    if output:
-                        new_commit = output.split()[0]
-                        
-                        if new_commit != current_commit:
-                            print(f"Updating {script_path}")
-                            content = re.sub(
-                                f'{commit_var}=.*',
-                                f'{commit_var}="{new_commit}"',
-                                content,
-                                flags=re.MULTILINE
-                            )
-        
         else:
             # Unknown repository type
             with open(script_path, 'a') as f:
@@ -156,21 +191,25 @@ def update_script(script_path):
             print("Unknown layout. Needs manual check.")
             break
     
-    # Write updated content back to file
-    with open(script_path, 'w') as f:
-        f.write(content)
+    # Write updated content back to file if modified
+    if content_modified:
+        print(f"Updating {script_path}")
+        with open(script_path, 'w') as f:
+            f.write(content)
     print()
 
-def main():
+async def main():
     # Change to the parent directory of the script
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
     # Set locale to C
     os.environ['LC_ALL'] = 'C'
     
-    # Process all .sh files in scripts.d directory
-    for script_path in glob.glob('scripts.d/**/*.sh', recursive=True):
-        update_script(script_path)
+    # Get all script paths
+    script_paths = glob.glob('scripts.d/**/*.sh', recursive=True)
+    
+    # Process all scripts concurrently
+    await asyncio.gather(*[update_script(path) for path in script_paths])
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
