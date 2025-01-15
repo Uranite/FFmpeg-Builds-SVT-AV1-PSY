@@ -24,16 +24,11 @@ ffbuild_dockerbuild() {
     local myconf=(
         --prefix="$FFBUILD_PREFIX"
         --buildtype=release
-        --default-library=static
-        -Dvulkan=enabled
-        -Dvk-proc-addr=disabled
+        -Ddefault_library=static
+        -D{d3d11,vulkan,shaderc}"=enabled"
+        -D{bench,demos,fuzz,tests}"=false"
+        -D{glslang,vk-proc-addr}"=disabled"
         -Dvulkan-registry="$FFBUILD_PREFIX"/share/vulkan/registry/vk.xml
-        -Dshaderc=enabled
-        -Dglslang=disabled
-        -Ddemos=false
-        -Dtests=false
-        -Dbench=false
-        -Dfuzz=false
     )
 
     if [[ $TARGET == win* ]]; then
