@@ -1,5 +1,36 @@
+diff --git a/libavcodec/libaomenc.c b/libavcodec/libaomenc.c
+index 0f7571ee7a..b1b658b248 100644
+--- a/libavcodec/libaomenc.c
++++ b/libavcodec/libaomenc.c
+@@ -686,6 +686,11 @@ static av_cold int aom_init(AVCodecContext *avctx,
+     aom_img_fmt_t img_fmt;
+     aom_codec_caps_t codec_caps = aom_codec_get_caps(iface);
+ 
++    if (ctx->tune == AOM_TUNE_IQ) {
++        ctx->still_picture = 1;
++        ctx->usage = AOM_USAGE_ALL_INTRA;
++    }
++
+     av_log(avctx, AV_LOG_INFO, "%s\n", aom_codec_version_str());
+     av_log(avctx, AV_LOG_VERBOSE, "%s\n", aom_codec_build_config());
+ 
+@@ -1506,6 +1511,7 @@ static const AVOption options[] = {
+     { "tune",            "The metric that the encoder tunes for. Automatically chosen by the encoder by default", OFFSET(tune), AV_OPT_TYPE_INT, {.i64 = -1}, -1, AOM_TUNE_SSIM, VE, .unit = "tune"},
+     { "psnr",            NULL,         0, AV_OPT_TYPE_CONST, {.i64 = AOM_TUNE_PSNR}, 0, 0, VE, .unit = "tune"},
+     { "ssim",            NULL,         0, AV_OPT_TYPE_CONST, {.i64 = AOM_TUNE_SSIM}, 0, 0, VE, .unit = "tune"},
++    { "iq",              "Tune for image quality (for still-image/all-intra coding)", 0, AV_OPT_TYPE_CONST, {.i64 = AOM_TUNE_IQ}, 0, 0, VE, .unit = "tune"},
+     FF_AV1_PROFILE_OPTS
+     { "still-picture", "Encode in single frame mode (typically used for still AVIF images).", OFFSET(still_picture), AV_OPT_TYPE_BOOL, {.i64 = 0}, -1, 1, VE },
+     { "dolbyvision",     "Enable Dolby Vision RPU coding", OFFSET(dovi.enable), AV_OPT_TYPE_BOOL, {.i64 = FF_DOVI_AUTOMATIC }, -1, 1, VE, .unit = "dovi" },
+@@ -1581,4 +1587,4 @@ FFCodec ff_libaom_av1_encoder = {
+                       FF_CODEC_CAP_AUTO_THREADS,
+     .defaults       = defaults,
+     .get_supported_config = av1_get_supported_config,
+-};
++};
+\ No newline at end of file
 diff --git a/libavcodec/libsvtav1.c b/libavcodec/libsvtav1.c
-index 79b28eb4df..acdcb845d1 100644
+index 43fe531fde..8b1d4587d1 100644
 --- a/libavcodec/libsvtav1.c
 +++ b/libavcodec/libsvtav1.c
 @@ -69,7 +69,7 @@ typedef struct SvtContext {
@@ -42,7 +73,7 @@ index 79b28eb4df..acdcb845d1 100644
      } else if (svt_enc->qp > 0) {
          param->qp                   = svt_enc->qp;
          param->rate_control_mode    = 0;
-@@ -694,7 +699,7 @@ static av_cold int eb_enc_close(AVCodecContext *avctx)
+@@ -698,7 +703,7 @@ static av_cold int eb_enc_close(AVCodecContext *avctx)
  #define VE AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_ENCODING_PARAM
  static const AVOption options[] = {
      { "preset", "Encoding preset",
@@ -51,7 +82,7 @@ index 79b28eb4df..acdcb845d1 100644
  
      FF_AV1_PROFILE_OPTS
  
-@@ -726,8 +731,8 @@ static const AVOption options[] = {
+@@ -730,8 +735,8 @@ static const AVOption options[] = {
          { LEVEL("7.3", 73) },
  #undef LEVEL
  
