@@ -1,5 +1,5 @@
 diff --git a/libavcodec/libaomenc.c b/libavcodec/libaomenc.c
-index 0f7571ee7a..b1b658b248 100644
+index 0f7571ee7a..99da31dd56 100644
 --- a/libavcodec/libaomenc.c
 +++ b/libavcodec/libaomenc.c
 @@ -686,6 +686,11 @@ static av_cold int aom_init(AVCodecContext *avctx,
@@ -14,8 +14,12 @@ index 0f7571ee7a..b1b658b248 100644
      av_log(avctx, AV_LOG_INFO, "%s\n", aom_codec_version_str());
      av_log(avctx, AV_LOG_VERBOSE, "%s\n", aom_codec_build_config());
  
-@@ -1506,6 +1511,7 @@ static const AVOption options[] = {
-     { "tune",            "The metric that the encoder tunes for. Automatically chosen by the encoder by default", OFFSET(tune), AV_OPT_TYPE_INT, {.i64 = -1}, -1, AOM_TUNE_SSIM, VE, .unit = "tune"},
+@@ -1503,9 +1508,10 @@ static const AVOption options[] = {
+     { "good",            "Good quality",      0, AV_OPT_TYPE_CONST, {.i64 = 0 /* AOM_USAGE_GOOD_QUALITY */}, 0, 0, VE, .unit = "usage"},
+     { "realtime",        "Realtime encoding", 0, AV_OPT_TYPE_CONST, {.i64 = 1 /* AOM_USAGE_REALTIME */},     0, 0, VE, .unit = "usage"},
+     { "allintra",        "All Intra encoding", 0, AV_OPT_TYPE_CONST, {.i64 = 2 /* AOM_USAGE_ALL_INTRA */},    0, 0, VE, .unit = "usage"},
+-    { "tune",            "The metric that the encoder tunes for. Automatically chosen by the encoder by default", OFFSET(tune), AV_OPT_TYPE_INT, {.i64 = -1}, -1, AOM_TUNE_SSIM, VE, .unit = "tune"},
++    { "tune",            "The metric that the encoder tunes for. Automatically chosen by the encoder by default", OFFSET(tune), AV_OPT_TYPE_INT, {.i64 = -1}, -1, AOM_TUNE_IQ, VE, .unit = "tune"},
      { "psnr",            NULL,         0, AV_OPT_TYPE_CONST, {.i64 = AOM_TUNE_PSNR}, 0, 0, VE, .unit = "tune"},
      { "ssim",            NULL,         0, AV_OPT_TYPE_CONST, {.i64 = AOM_TUNE_SSIM}, 0, 0, VE, .unit = "tune"},
 +    { "iq",              "Tune for image quality (for still-image/all-intra coding)", 0, AV_OPT_TYPE_CONST, {.i64 = AOM_TUNE_IQ}, 0, 0, VE, .unit = "tune"},
