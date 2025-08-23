@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_REPO="https://github.com/BlueSwordM/svt-av1-psyex.git"
-SCRIPT_COMMIT="e07ee4b98c2a5ff6f0eedbd1e6554b9475f4a2b7"
+SCRIPT_COMMIT="d1dbfba23beb1ff7a7f5129fd303e4cf5d397eb0"
 
 ffbuild_enabled() {
     [[ $TARGET == win32 ]] && return -1

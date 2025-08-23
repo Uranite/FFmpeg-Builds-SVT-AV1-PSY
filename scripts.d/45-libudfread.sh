@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_REPO="https://code.videolan.org/videolan/libudfread.git"
-SCRIPT_COMMIT="a089d1bd4118f5072a1dbb76f459dc41bb106bb5"
+SCRIPT_COMMIT="c3cd5cbb097924557ea4d9da1ff76a74620c51a8"
 
 ffbuild_enabled() {
     return 0
