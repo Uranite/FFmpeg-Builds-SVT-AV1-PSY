@@ -16,7 +16,7 @@ trap "rm -rf -- '$DL_SCRIPT_DIR'" EXIT
 
 mkdir -p "${PWD}"/.cache/downloads
 
-for STAGE in scripts.d/*.sh scripts.d/*/*.sh; do
+for STAGE in scripts.d/*.sh; do
 	STAGENAME="$(basename "$STAGE" | sed 's/.sh$//')"
 
 	cat <<-EOF >"${DL_SCRIPT_DIR}/${STAGENAME}.sh"

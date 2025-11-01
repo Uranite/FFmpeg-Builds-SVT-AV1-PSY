@@ -39,7 +39,47 @@ cat <<EOF >"$BUILD_SCRIPT"
         --extra-cflags="\$FF_CFLAGS" --extra-cxxflags="\$FF_CXXFLAGS" --extra-libs="\$FF_LIBS" \
         --extra-ldflags="\$FF_LDFLAGS" --extra-ldexeflags="\$FF_LDEXEFLAGS" \
         --cc="\$CC" --cxx="\$CXX" --ar="\$AR" --ranlib="\$RANLIB" --nm="\$NM" \
-        --extra-version="\$(date +%Y%m%d)"
+        --extra-version="\$(date +%Y%m%d)" \
+        --disable-programs \
+        --disable-doc \
+        --disable-htmlpages \
+        --disable-manpages \
+        --disable-podpages \
+        --disable-txtpages \
+        --disable-network \
+        --disable-autodetect \
+        --disable-all \
+        --disable-everything \
+        --enable-avcodec \
+        --enable-avformat \
+        --enable-avutil \
+        --enable-swscale \
+        --enable-swresample \
+        --enable-protocol=file \
+        --enable-demuxer=matroska \
+        --enable-demuxer=mov \
+        --enable-demuxer=mpegts \
+        --enable-demuxer=mpegps \
+        --enable-demuxer=avi \
+        --enable-demuxer=flv \
+        --enable-demuxer=ivf \
+        --enable-decoder=h264 \
+        --enable-decoder=hevc \
+        --enable-decoder=mpeg2video \
+        --enable-decoder=mpeg1video \
+        --enable-decoder=mpeg4 \
+        --enable-decoder=av1 \
+        --enable-decoder=libdav1d \
+        --enable-decoder=vp9 \
+        --enable-decoder=vc1 \
+        --enable-libdav1d \
+        --enable-parser=h264 \
+        --enable-parser=hevc \
+        --enable-parser=mpeg4video \
+        --enable-parser=mpegvideo \
+        --enable-parser=av1 \
+        --enable-parser=vp9 \
+        --enable-parser=vc1
     make -j\$(nproc) V=1
     make install install-doc
 EOF
