@@ -1,17 +1,21 @@
 diff --git a/libavcodec/libsvtav1.c b/libavcodec/libsvtav1.c
-index 43fe531fde..31fc3263c8 100644
+index fec2ed596e..72e6a42ef4 100644
 --- a/libavcodec/libsvtav1.c
 +++ b/libavcodec/libsvtav1.c
-@@ -69,7 +69,7 @@ typedef struct SvtContext {
+@@ -71,9 +71,9 @@ typedef struct SvtContext {
+ 
      // User options.
      AVDictionary *svtav1_opts;
-     int enc_mode;
+-    int enc_mode;
 -    int crf;
+-    int qp;
++    int   enc_mode;
 +    float crf;
-     int qp;
++    int   qp;
  } SvtContext;
  
-@@ -205,6 +205,7 @@ static void handle_side_data(AVCodecContext *avctx,
+ static const struct {
+@@ -208,6 +208,7 @@ static void handle_side_data(AVCodecContext *avctx,
      }
  }
  
@@ -19,8 +23,8 @@ index 43fe531fde..31fc3263c8 100644
  static int config_enc_params(EbSvtAv1EncConfiguration *param,
                               AVCodecContext *avctx)
  {
-@@ -213,7 +214,7 @@ static int config_enc_params(EbSvtAv1EncConfiguration *param,
-     const AVDictionaryEntry av_unused *en = NULL;
+@@ -216,7 +217,7 @@ static int config_enc_params(EbSvtAv1EncConfiguration *param,
+     av_unused const AVDictionaryEntry *en = NULL;
  
      // Update param from options
 -    if (svt_enc->enc_mode >= -1)
@@ -28,7 +32,7 @@ index 43fe531fde..31fc3263c8 100644
          param->enc_mode             = svt_enc->enc_mode;
  
      if (avctx->bit_rate) {
-@@ -233,8 +234,10 @@ static int config_enc_params(EbSvtAv1EncConfiguration *param,
+@@ -236,8 +237,10 @@ static int config_enc_params(EbSvtAv1EncConfiguration *param,
              FFMAX(avctx->bit_rate, avctx->rc_max_rate);
  
      if (svt_enc->crf > 0) {
@@ -40,7 +44,7 @@ index 43fe531fde..31fc3263c8 100644
      } else if (svt_enc->qp > 0) {
          param->qp                   = svt_enc->qp;
          param->rate_control_mode    = 0;
-@@ -698,7 +701,7 @@ static av_cold int eb_enc_close(AVCodecContext *avctx)
+@@ -773,7 +776,7 @@ static av_cold int eb_enc_close(AVCodecContext *avctx)
  #define VE AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_ENCODING_PARAM
  static const AVOption options[] = {
      { "preset", "Encoding preset",
@@ -49,13 +53,13 @@ index 43fe531fde..31fc3263c8 100644
  
      FF_AV1_PROFILE_OPTS
  
-@@ -730,8 +733,8 @@ static const AVOption options[] = {
+@@ -805,8 +808,8 @@ static const AVOption options[] = {
          { LEVEL("7.3", 73) },
  #undef LEVEL
  
 -    { "crf", "Constant Rate Factor value", OFFSET(crf),
 -      AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 63, VE },
-+    { "crf", "Constant Rate Factor value (can use 0.25 increments)", OFFSET(crf),
++    { "crf", "Constant Rate Factor value (0.25 increments)", OFFSET(crf),
 +      AV_OPT_TYPE_FLOAT, { .i64 = 0 }, 0, 70, VE },
      { "qp", "Initial Quantizer level value", OFFSET(qp),
        AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 63, VE },
