@@ -44,7 +44,7 @@ cat <<EOF >"$BUILD_SCRIPT"
     ./configure --prefix=/ffbuild/prefix --pkg-config-flags="--static" \$FFBUILD_TARGET_FLAGS \$FF_CONFIGURE \
         --extra-cflags="\$FF_CFLAGS" --extra-cxxflags="\$FF_CXXFLAGS" --extra-libs="\$FF_LIBS" \
         --extra-ldflags="\$FF_LDFLAGS" --extra-ldexeflags="\$FF_LDEXEFLAGS" \
-        --cc="\$CC" --cxx="\$CXX" --ar="\$AR" --ranlib="\$RANLIB" --nm="\$NM" \
+        --cc="ccache \$CC" --cxx="ccache \$CXX" --ar="\$AR" --ranlib="\$RANLIB" --nm="\$NM" \
         --extra-version="\$(date +%Y%m%d)"
     make -j\$(nproc) V=1
     make install install-doc
@@ -57,7 +57,10 @@ if [ -d "patches/ffmpeg" ]; then
     PATCHES_MOUNT="-v $PWD/patches:/patches"
 fi
 
-docker run --rm -i $TTY_ARG "${UIDARGS[@]}" -v "$PWD/ffbuild":/ffbuild $PATCHES_MOUNT -v "$BUILD_SCRIPT":/build.sh "$IMAGE" bash /build.sh
+mkdir -p .ccache
+CCACHE_MOUNT="-v $PWD/.ccache:/.ccache"
+
+docker run --rm -i $TTY_ARG "${UIDARGS[@]}" -v "$PWD/ffbuild":/ffbuild $PATCHES_MOUNT $CCACHE_MOUNT -e CCACHE_DIR=/.ccache -v "$BUILD_SCRIPT":/build.sh "$IMAGE" bash /build.sh
 
 if [[ -n "$FFBUILD_OUTPUT_DIR" ]]; then
     mkdir -p "$FFBUILD_OUTPUT_DIR"
