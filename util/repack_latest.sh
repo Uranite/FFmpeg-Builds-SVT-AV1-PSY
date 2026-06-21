@@ -61,10 +61,12 @@ while [[ $# -gt 0 ]]; do
         rm -rf "$REPACK_DIR"
     ) &
 
-    while [[ $(jobs -p | wc -l) -ge $(nproc) ]]; do
-        wait -n
+    while [[ $(jobs | wc -l) -gt 3 ]]; do
+        wait %1
     done
 done
 
-wait
+while [[ $(jobs | wc -l) -gt 0 ]]; do
+    wait %1
+done
 rm -rf repack_dir
